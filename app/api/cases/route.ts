@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllCases, getCaseByReceipt, createCase } from '@/lib/db';
+import { getAllCases, getCaseByReceipt, createCase, updateCase } from '@/lib/db';
 import { Case } from '@/lib/types';
 import { nanoid } from 'nanoid';
 
 export async function GET() {
-  const cases = getAllCases();
+  const cases = await getAllCases();
   return NextResponse.json(cases);
 }
 
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { receiptNumber, title, role, statement } = body;
 
-  const existing = getCaseByReceipt(receiptNumber);
+  const existing = await getCaseByReceipt(receiptNumber);
 
   if (existing) {
     if (role === '남자친구' && existing.boyfriend)
@@ -24,8 +24,7 @@ export async function POST(req: NextRequest) {
     if (role === '남자친구') updates.boyfriend = statement;
     if (role === '여자친구') updates.girlfriend = statement;
 
-    const { updateCase } = await import('@/lib/db');
-    const updated = updateCase(receiptNumber, updates);
+    const updated = await updateCase(receiptNumber, updates);
     return NextResponse.json(updated);
   }
 
@@ -37,6 +36,6 @@ export async function POST(req: NextRequest) {
     ...(role === '남자친구' ? { boyfriend: statement } : { girlfriend: statement }),
   };
 
-  createCase(newCase);
+  await createCase(newCase);
   return NextResponse.json(newCase, { status: 201 });
 }

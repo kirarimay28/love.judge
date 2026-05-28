@@ -1,46 +1,35 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import path from 'path';
-import { Case, CaseDB } from './types';
+import { Redis } from '@upstash/redis';
+import { Case } from './types';
 
-const DB_PATH = path.join(process.cwd(), 'data', 'cases.json');
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
 
-function ensureDbExists() {
-  const dir = path.dirname(DB_PATH);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  if (!existsSync(DB_PATH)) writeFileSync(DB_PATH, JSON.stringify({ cases: [] }));
+const CASES_KEY = 'mattai:cases';
+
+export async function getAllCases(): Promise<Case[]> {
+  const cases = await redis.get<Case[]>(CASES_KEY);
+  return cases ?? [];
 }
 
-function readDb(): CaseDB {
-  ensureDbExists();
-  const raw = readFileSync(DB_PATH, 'utf-8');
-  return JSON.parse(raw);
+export async function getCaseByReceipt(receiptNumber: string): Promise<Case | undefined> {
+  const cases = await getAllCases();
+  return cases.find(c => c.receiptNumber === receiptNumber);
 }
 
-function writeDb(db: CaseDB) {
-  ensureDbExists();
-  writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
-}
-
-export function getAllCases(): Case[] {
-  return readDb().cases;
-}
-
-export function getCaseByReceipt(receiptNumber: string): Case | undefined {
-  return readDb().cases.find(c => c.receiptNumber === receiptNumber);
-}
-
-export function createCase(c: Case): Case {
-  const db = readDb();
-  db.cases.push(c);
-  writeDb(db);
+export async function createCase(c: Case): Promise<Case> {
+  const cases = await getAllCases();
+  cases.push(c);
+  await redis.set(CASES_KEY, cases);
   return c;
 }
 
-export function updateCase(receiptNumber: string, updates: Partial<Case>): Case | null {
-  const db = readDb();
-  const idx = db.cases.findIndex(c => c.receiptNumber === receiptNumber);
+export async function updateCase(receiptNumber: string, updates: Partial<Case>): Promise<Case | null> {
+  const cases = await getAllCases();
+  const idx = cases.findIndex(c => c.receiptNumber === receiptNumber);
   if (idx === -1) return null;
-  db.cases[idx] = { ...db.cases[idx], ...updates };
-  writeDb(db);
-  return db.cases[idx];
+  cases[idx] = { ...cases[idx], ...updates };
+  await redis.set(CASES_KEY, cases);
+  return cases[idx];
 }

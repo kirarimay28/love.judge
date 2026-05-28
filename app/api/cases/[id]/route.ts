@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const c = getCaseByReceipt(id);
+  const c = await getCaseByReceipt(id);
   if (!c) return NextResponse.json({ error: '사건을 찾을 수 없습니다.' }, { status: 404 });
   return NextResponse.json(c);
 }

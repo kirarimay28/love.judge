@@ -9,7 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const c = getCaseByReceipt(id);
+  const c = await getCaseByReceipt(id);
 
   if (!c) return NextResponse.json({ error: '사건을 찾을 수 없습니다.' }, { status: 404 });
   if (!c.boyfriend || !c.girlfriend)
@@ -58,6 +58,6 @@ export async function POST(
   const parsed = JSON.parse(jsonMatch[0]);
   const judgment = { ...parsed, violenceWarning: parsed.violence >= 3, createdAt: new Date().toISOString() };
 
-  const updated = updateCase(id, { judgment });
+  const updated = await updateCase(id, { judgment });
   return NextResponse.json(updated);
 }
