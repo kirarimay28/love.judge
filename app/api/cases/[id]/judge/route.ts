@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCaseByReceipt, updateCase } from '@/lib/db';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(
   _req: NextRequest,
@@ -48,16 +45,37 @@ export async function POST(
   "solution": "<두 사람을 위한 구체적 해결책 및 조언 4-5문장>"
 }`;
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch)
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      response_format: { type: 'json_object' },
+    }),
+  });
+
+  if (!res.ok)
     return NextResponse.json({ error: 'AI 판결 생성에 실패했습니다.' }, { status: 500 });
 
-  const parsed = JSON.parse(jsonMatch[0]);
-  const judgment = { ...parsed, violenceWarning: parsed.violence >= 3, createdAt: new Date().toISOString() };
+  const data = await res.json();
+  const text = data.choices[0].message.content;
 
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch)
+      return NextResponse.json({ error: 'AI 판결 생성에 실패했습니다.' }, { status: 500 });
+    parsed = JSON.parse(jsonMatch[0]);
+  }
+
+  const judgment = { ...parsed, violenceWarning: parsed.violence >= 3, createdAt: new Date().toISOString() };
   const updated = await updateCase(id, { judgment });
   return NextResponse.json(updated);
 }
