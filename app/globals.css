@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #fff8f8;
+  --primary: #e05a8c;
+  --primary-dark: #c04070;
+  --accent: #f9c6d5;
+  --text: #2d2d2d;
+  --muted: #888;
+  --border: #f0d0dc;
+  --card: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+.stamp-warning {
+  display: inline-block;
+  border: 3px solid #dc2626;
+  color: #dc2626;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  transform: rotate(-3deg);
+  letter-spacing: 1px;
+}
+
+.verdict-card {
+  background: linear-gradient(135deg, #fff8f8 0%, #fff0f5 100%);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 24px rgba(224, 90, 140, 0.08);
+}
+
+.star-filled { color: #f59e0b; }
+.star-empty { color: #e5e7eb; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in { animation: fadeIn 0.4s ease forwards; }
