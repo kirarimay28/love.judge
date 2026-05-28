@@ -48,7 +48,7 @@ export async function POST(
   "solution": "<두 사람을 위한 구체적 해결책 및 조언 4-5문장>"
 }`;
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
   const result = await model.generateContent(prompt);
   const text = result.response.text();
   const jsonMatch = text.match(/\{[\s\S]*\}/);
