@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCaseByReceipt, updateCase } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const client = new Anthropic();
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(
   _req: NextRequest,
@@ -48,13 +48,9 @@ export async function POST(
   "solution": "<두 사람을 위한 구체적 해결책 및 조언 4-5문장>"
 }`;
 
-  const message = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  const text = message.content[0].type === 'text' ? message.content[0].text : '';
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const result = await model.generateContent(prompt);
+  const text = result.response.text();
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch)
     return NextResponse.json({ error: 'AI 판결 생성에 실패했습니다.' }, { status: 500 });
