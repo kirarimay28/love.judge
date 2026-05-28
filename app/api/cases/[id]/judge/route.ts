@@ -59,8 +59,11 @@ export async function POST(
     }),
   });
 
-  if (!res.ok)
-    return NextResponse.json({ error: 'AI 판결 생성에 실패했습니다.' }, { status: 500 });
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error('Groq error:', res.status, errText);
+    return NextResponse.json({ error: `Groq ${res.status}: ${errText}` }, { status: 500 });
+  }
 
   const data = await res.json();
   const text = data.choices[0].message.content;
