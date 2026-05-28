@@ -8,7 +8,12 @@ interface CaseFormProps {
 }
 
 const EMPTY_STATEMENT: Omit<Statement, 'role'> = {
-  when: '', what: '', how: '', feelings: '', myFault: '', wishes: '',
+  when: '',
+  what: '',
+  how: '',
+  feelings: '',
+  myFault: '',
+  wishes: '',
 };
 
 export default function CaseForm({ onSuccess }: CaseFormProps) {
@@ -29,39 +34,63 @@ export default function CaseForm({ onSuccess }: CaseFormProps) {
       const res = await fetch(`/api/cases/${receiptNumber.trim()}`);
       if (res.ok) {
         const data: Case = await res.json();
+        if (data.boyfriend && data.girlfriend) {
+          onSuccess(data);
+          return;
+        }
         setExistingCase(data);
         setTitle(data.title);
       } else {
         setExistingCase(null);
       }
       setStep('form');
-    } catch { setError('서버 오류가 발생했습니다.'); } finally { setLoading(false); }
+    } catch {
+      setError('서버 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!role) { setError('본인 자격을 선택해주세요.'); return; }
     if (!title.trim()) { setError('사건 제목을 입력해주세요.'); return; }
-    if (Object.values(stmt).some(v => !v.trim())) { setError('모든 항목을 입력해주세요.'); return; }
-    setLoading(true); setError('');
+    const missing = Object.entries(stmt).find(([, v]) => !v.trim());
+    if (missing) { setError('모든 항목을 입력해주세요.'); return; }
+
+    setLoading(true);
+    setError('');
     try {
       const res = await fetch('/api/cases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ receiptNumber: receiptNumber.trim(), title: title.trim(), role, statement: { role, ...stmt } }),
+        body: JSON.stringify({
+          receiptNumber: receiptNumber.trim(),
+          title: title.trim(),
+          role,
+          statement: { role, ...stmt },
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || '오류가 발생했습니다.'); return; }
       onSuccess(data);
-    } catch { setError('서버 오류가 발생했습니다.'); } finally { setLoading(false); }
+    } catch {
+      setError('서버 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   const field = (key: keyof typeof stmt, label: string, placeholder: string) => (
     <div key={key}>
       <label className="block text-sm font-semibold text-gray-600 mb-1">{label}</label>
-      <textarea className="w-full border border-pink-200 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white"
-        rows={3} placeholder={placeholder} value={stmt[key]}
-        onChange={e => setStmt(prev => ({ ...prev, [key]: e.target.value }))} />
+      <textarea
+        className="w-full border border-pink-200 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white"
+        rows={3}
+        placeholder={placeholder}
+        value={stmt[key]}
+        onChange={e => setStmt(prev => ({ ...prev, [key]: e.target.value }))}
+      />
     </div>
   );
 
@@ -71,16 +100,24 @@ export default function CaseForm({ onSuccess }: CaseFormProps) {
         <div>
           <label className="block text-sm font-semibold text-gray-600 mb-2">접수 번호</label>
           <div className="flex gap-2">
-            <input className="flex-1 border border-pink-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white"
+            <input
+              className="flex-1 border border-pink-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white"
               placeholder="새 사건은 직접 번호를 만들어 입력하세요 (예: LOVE-001)"
-              value={receiptNumber} onChange={e => setReceiptNumber(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleReceiptCheck()} />
-            <button onClick={handleReceiptCheck} disabled={loading}
-              className="px-5 py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50">
+              value={receiptNumber}
+              onChange={e => setReceiptNumber(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleReceiptCheck()}
+            />
+            <button
+              onClick={handleReceiptCheck}
+              disabled={loading}
+              className="px-5 py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50"
+            >
               {loading ? '확인 중...' : '확인'}
             </button>
           </div>
-          <p className="text-xs text-gray-400 mt-2">기존 사건에 참여하려면 상대방이 알려준 번호를 입력하세요.</p>
+          <p className="text-xs text-gray-400 mt-2">
+            기존 사건에 참여하려면 상대방이 알려준 번호를 입력하세요.
+          </p>
         </div>
         {error && <p className="text-red-500 text-sm">{error}</p>}
       </div>
@@ -99,20 +136,30 @@ export default function CaseForm({ onSuccess }: CaseFormProps) {
 
       <div>
         <label className="block text-sm font-semibold text-gray-600 mb-1">사건 제목</label>
-        <input className="w-full border border-pink-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white disabled:bg-gray-50"
-          placeholder="예: 약속 취소 사건, 말실수 사건" value={title} disabled={!!existingCase}
-          onChange={e => setTitle(e.target.value)} />
+        <input
+          className="w-full border border-pink-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white disabled:bg-gray-50"
+          placeholder="예: 약속 취소 사건, 말실수 사건"
+          value={title}
+          disabled={!!existingCase}
+          onChange={e => setTitle(e.target.value)}
+        />
       </div>
 
       <div>
         <label className="block text-sm font-semibold text-gray-600 mb-2">본인 자격</label>
         <div className="flex gap-3">
           {(['남자친구', '여자친구'] as const).map(r => (
-            <button key={r} type="button" onClick={() => setRole(r)}
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRole(r)}
               disabled={!!(existingCase?.boyfriend && r === '남자친구') || !!(existingCase?.girlfriend && r === '여자친구')}
               className={`flex-1 py-3 rounded-xl text-sm font-semibold border-2 transition-all ${
-                role === r ? 'bg-pink-500 border-pink-500 text-white' : 'border-pink-200 text-gray-600 hover:border-pink-400'
-              } disabled:opacity-40 disabled:cursor-not-allowed`}>
+                role === r
+                  ? 'bg-pink-500 border-pink-500 text-white'
+                  : 'border-pink-200 text-gray-600 hover:border-pink-400'
+              } disabled:opacity-40 disabled:cursor-not-allowed`}
+            >
               {r === '남자친구' ? '💙 남자친구' : '🩷 여자친구'}
             </button>
           ))}
@@ -134,14 +181,19 @@ export default function CaseForm({ onSuccess }: CaseFormProps) {
 
       {error && <p className="text-red-500 text-sm">{error}</p>}
 
-      <button type="submit" disabled={loading}
-        className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl font-bold text-base transition-all shadow-md hover:shadow-lg disabled:opacity-50">
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl font-bold text-base transition-all shadow-md hover:shadow-lg disabled:opacity-50"
+      >
         {loading ? '제출 중...' : '입장 제출하기'}
       </button>
 
-      <button type="button"
+      <button
+        type="button"
         onClick={() => { setStep('init'); setExistingCase(null); setRole(''); setStmt({ ...EMPTY_STATEMENT }); setError(''); }}
-        className="w-full py-2 text-sm text-gray-400 hover:text-gray-600">
+        className="w-full py-2 text-sm text-gray-400 hover:text-gray-600"
+      >
         ← 접수 번호 다시 입력
       </button>
     </form>
